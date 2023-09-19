@@ -103,7 +103,10 @@ module top(
     always @(posedge sys_clk or negedge sw_0) begin
         if (!sw_0) begin
             // reset
-
+            mem_enable <= 0;
+            mem_readWrite <= 0;
+            wtb_enable <= 0;
+            wtb_mode_select <= 1;
             state <= s_idle;
             
         end else begin
