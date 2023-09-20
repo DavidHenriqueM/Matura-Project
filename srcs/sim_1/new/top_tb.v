@@ -60,20 +60,36 @@ module top_tb();
     initial begin
         sys_clk <= 0;
         sw_0 <=  1;
-        #1 sw_0 <= 0;
-        #1 sw_0 <= 1;
+        #1
+        sw_0 <= 0;
+        #1
+        sw_0 <= 1;
         wtb_byte <= 8'h00;
         wtb_mode_select <= 0;
-        #9 wtb_enable <= 1;
-        #2000 wtb_byte <= 8'hab;
-        #2000 wtb_byte <= 8'h10;
-        #2000 wtb_mode_select <= 1;
+        #8
+        wtb_enable <= 1;
+        #2000 
+        wtb_byte <= 8'hab;
+        #2000 
+        wtb_byte <= 8'h10;
+        #2000
+        wtb_mode_select <= 1;
         wtb_word <= 32'h00ff12cd;
-        #4000 wtb_byte <= 8'h01;
+        #12000
+        wtb_enable <= 0;
+        #12000
+        wtb_byte <= 8'h01;
         wtb_mode_select <= 0;
-        #2000 wtb_byte <= 8'hab;
-        #2000 wtb_byte <= 8'h10;
-        #1000 wtb_enable <= 0;
+        #1000 
+        wtb_enable <= 1;
+        #2000 
+        wtb_byte <= 8'hab;
+        #2000 
+        wtb_byte <= 8'h10;
+        #1000 
+        wtb_enable <= 0;
+        #1000
+        $finish;
     end
 
 endmodule

@@ -164,6 +164,16 @@ module command_decoder(
                                     o_error <= 2'b01;
                                     o_done <= 1'b1;
                                 end
+                            end else begin
+                                if(wait_cycle_count > 300) begin
+                                    state <= s_error_noaddress;
+                                    wait_cycle_count <= 0;
+                                    o_error <= 2'b10;
+                                    o_done <= 1'b1;
+                                end
+                                else begin
+                                    wait_cycle_count <= wait_cycle_count + 1;
+                                end
                             end 
                         end
                     s_data_init:
