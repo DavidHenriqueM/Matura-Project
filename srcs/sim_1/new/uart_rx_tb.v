@@ -31,11 +31,11 @@ module uart_rx_tb(
     wire w_uart_rx_done;
 
     reg r_uart_tx_enable;
-    reg [31:0] r_inword;
     reg [7:0] r_uart_byte;
     wire w_uart_tx_done;
     wire [7:0]o_data;
     wire [2:0]w_state; 
+    reg uart_tx_rst = 1;
 
     uart_rx UartReciever(
     .clock(clk),
@@ -45,24 +45,28 @@ module uart_rx_tb(
     );
 
     uart_tx UART_TX(
-
         .clock(clk),
-        .enable(r_uart_tx_enable),
+        .reset(uart_tx_rst),
         .in_Byte(r_uart_byte),
+        .enable(r_uart_tx_enable),
         .r_done(w_uart_tx_done),
-        .serial_out(w_uart),
-        .o_state(w_state),
-        .o_data(o_data)
+        .serial_out(w_uart)
         );
 
     initial begin
+
         clk <= 0;
+        uart_tx_rst <= 1;
+        #1 
+        uart_tx_rst <= 0;
+        #1
+        uart_tx_rst <= 1;
         r_uart_byte <= 8'h0f;
         r_uart_tx_enable <= 1;
     end
 
     always begin
-        #10 clk <= ~clk;
+        #5 clk <= ~clk;
     end
 
     always begin

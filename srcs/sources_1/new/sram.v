@@ -4,7 +4,7 @@
 
 module sram(
     input             clock, 
-    input             reset,
+    //input             reset,
     input             enable,
     input             readWrite,
     input [31:0]      dataIn,
@@ -20,10 +20,10 @@ module sram(
     reg [31:0] memory [0:DEPTH-1];
 
     // Read operation
-    always @(posedge clock or negedge reset) begin
-        if (!reset) begin
+    always @(posedge clock /*or negedge reset*/) begin
+        /*if (!reset) begin
             dataOut <= 32'b0;
-        end else begin
+        end else begin*/
             if (enable) begin
                 if (address < DEPTH) begin
                     dataOut <= memory[address];
@@ -35,7 +35,7 @@ module sram(
             end else begin
                 dataOut <= 32'b0;
             end
-        end
+        //end
     end
 
 endmodule

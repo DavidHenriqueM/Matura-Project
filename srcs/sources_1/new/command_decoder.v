@@ -25,8 +25,8 @@ module command_decoder(
     input uart_in,
     input reset, // active low
     // data_in and in_spoof_done for testing
-    input [7:0] data_in,
-    input  in_spoof_done,
+    //input [7:0] data_in, // no longer neccessary
+    //input  in_spoof_done,
 
     output reg [7:0] o_command,
     output reg [14:0] o_address,
@@ -34,10 +34,12 @@ module command_decoder(
     output reg o_done,
     output reg o_readwrite,
     // for testing give state as output
-    output reg [4:0] state,
+    //output reg [4:0] state, // not needed use scope for testing
     output reg [1:0] o_error
     );
     
+    reg [3:0] state;
+
     parameter s_idle = 4'b0000;
     parameter s_command_byte = 4'b0001;
     parameter s_address_wait_1 = 4'b0010;
@@ -86,7 +88,14 @@ module command_decoder(
             //donesignal <= w_uart_rx_done; // under standard operation
             if(!reset) begin
                 state <= s_idle;
-
+                o_error <= 0;
+                wait_cycle_count <= 0;
+                o_done <= 1'b0;
+                byte_index <= -1;
+                o_command <= 0;
+                o_address <= 0;
+                o_data <= 0;
+                o_readwrite <= 0;
             end else begin
                 case (state)
                     s_idle:

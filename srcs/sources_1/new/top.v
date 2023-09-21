@@ -62,8 +62,7 @@ module top(
 
     reg [2:0] state = s_idle;
 
-    
-
+    reg [1:0] save_error = 0;
 
     command_decoder CommandDecoder(
         .clock       (sys_clk),
@@ -80,7 +79,7 @@ module top(
 
     sram SRAM(
         .clock      (sys_clk),
-        .reset      (sw_0),
+        //.reset      (sw_0),
         .enable     (mem_enable), 
         .readWrite  (mem_readWrite),
         .dataIn     (mem_dataIn),
@@ -90,6 +89,7 @@ module top(
 
     word_to_byte_tx WordToByte(
         .clock         (sys_clk),
+        .reset         (sw_0),
         .enable        (wtb_enable),
         .i_mode_select (wtb_mode_select),
         .i_word        (wtb_word),
@@ -107,20 +107,31 @@ module top(
             mem_readWrite <= 0;
             wtb_enable <= 0;
             wtb_mode_select <= 1;
+            wtb_byte <= 0;
+            wtb_word <= 0;
+            save_error <= 0;
             state <= s_idle;
+            mem_address <= 0;
+            mem_dataIn <= 0;
             
         end else begin
             case(state)
                 s_idle : begin
                     mem_enable <= 0;
                     wtb_enable <= 0;
+                    save_error <= 0;
+
+                    wtb_byte <= 0; // reset what will be transmitted
+                    wtb_word <= 0;
+
                     if (cmd_dec_done) begin
                         state <= s_is_error;
                     end
                 end
                 s_is_error : begin
                     if (cmd_dec_error != 2'b00) begin // if not in the error free state
-                        state <= s_send_error_message;    
+                        state <= s_send_error_message;   
+                        save_error <= cmd_dec_error; // we need to register the error value to compare it in the next state
                     end else begin
                         state <= s_check_command;
                     end
@@ -128,13 +139,14 @@ module top(
                 s_send_error_message : begin
                     wtb_enable <= 1;
                     wtb_mode_select <= 0; // byte mode
-                    if (cmd_dec_error == 2'b01) begin
-                        wtb_byte <= 8'b00000001;
-                    end else if (cmd_dec_error == 2'b10) begin
-                        wtb_byte <= 8'b00000010;
-                    end else if (cmd_dec_error == 2'b11) begin
-                        wtb_byte <= 8'b00000011;
+                    if (save_error == 2'b01) begin
+                        wtb_byte <= 1;
+                    end else if (save_error == 2'b10) begin
+                        wtb_byte <= 2;
+                    end else if (save_error == 2'b11) begin
+                        wtb_byte <= 3;
                     end
+                    save_error <= 0; // reset saved error
                     state <= s_idle; // should I do this like this we arent outputing to any other module so I can just go look for new input
                     // how do I handle wtb being busy --> Just load to register ~ meh
                 end

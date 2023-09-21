@@ -88,8 +88,6 @@ module top_tb();
         wtb_byte <= 8'h10;
         #1000 
         wtb_enable <= 0;
-        #1000
-        $finish;
     end
 
 endmodule
