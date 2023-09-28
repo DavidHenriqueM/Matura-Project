@@ -180,13 +180,13 @@ module uart_tx
     );
     
     // State indication
-    parameter s_idle = 3'b000;
-    parameter s_enable = 3'b001;
-    parameter s_start_bit = 3'b010;
-    parameter s_data_bits = 3'b011;
-    parameter s_stop_bit = 3'b100;
-    parameter s_cleanup = 3'b101;
-    parameter s_cleanup2 = 3'b110;
+    localparam s_idle = 3'b000;
+    localparam s_enable = 3'b001;
+    localparam s_start_bit = 3'b010;
+    localparam s_data_bits = 3'b011;
+    localparam s_stop_bit = 3'b100;
+    localparam s_cleanup = 3'b101;
+    localparam s_cleanup2 = 3'b110;
 
     
     

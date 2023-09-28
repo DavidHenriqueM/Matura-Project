@@ -52,11 +52,11 @@ module uart_rx
     );
     
     // State indication
-    parameter s_idle = 3'b000;
-    parameter s_start_bit = 3'b001;
-    parameter s_data_bits = 3'b010;
-    parameter s_stop_bit = 3'b011;
-    parameter s_cleanup = 3'b111;
+    localparam s_idle = 3'b000; // we get a synthesis error if we do not use a localparam 
+    localparam s_start_bit = 3'b001;
+    localparam s_data_bits = 3'b010;
+    localparam s_stop_bit = 3'b011;
+    localparam s_cleanup = 3'b111;
     
     reg data_R = 1'b1;
     reg data = 1'b1;

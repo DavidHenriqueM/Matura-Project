@@ -80,7 +80,7 @@ module command_decoder(
     reg [7:0] r_inByte = 0;
     reg donesignal = 0;
 
-    always @(posedge clock or negedge reset)
+    always @(posedge clock /* or negedge reset */) // synchronous reset
         begin
             //r_inByte <= data_in; // for testing
             //r_inByte <= w_uart_rx_out; // under standard operation

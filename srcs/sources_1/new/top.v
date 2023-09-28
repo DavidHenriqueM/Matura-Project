@@ -79,7 +79,7 @@ module top(
 
     sram SRAM(
         .clock      (sys_clk),
-        //.reset      (sw_0),
+        .reset      (sw_0),
         .enable     (mem_enable), 
         .readWrite  (mem_readWrite),
         .dataIn     (mem_dataIn),
@@ -99,8 +99,87 @@ module top(
         );
 
 
+    /*
+    always @(posedge sys_clk or negedge sw_0) begin  // asynchronous reset
+        if (!sw_0) begin
+            // reset
+            mem_enable <= 0;
+            //mem_readWrite <= 0;
+            wtb_enable <= 0;
+            wtb_mode_select <= 1;
+            wtb_byte <= 0;
+            wtb_word <= 0;
+            save_error <= 0;
+            state <= s_idle;
+            //mem_address <= 0;
+            //mem_dataIn <= 0;
+            
+        end else begin
+            case(state)
+                s_idle : begin
+                    mem_dataIn <= 0;
+                    mem_address <= 0;
+                    mem_readWrite <= 0;
+                    mem_enable <= 0;
+                    wtb_enable <= 0;
+                    save_error <= 0;
 
-    always @(posedge sys_clk or negedge sw_0) begin
+                    wtb_byte <= 0; // reset what will be transmitted
+                    wtb_word <= 0;
+
+                    if (cmd_dec_done) begin
+                        state <= s_is_error;
+                    end
+                end
+                s_is_error : begin
+                    if (cmd_dec_error != 2'b00) begin // if not in the error free state
+                        state <= s_send_error_message;   
+                        save_error <= cmd_dec_error; // we need to register the error value to compare it in the next state
+                    end else begin
+                        state <= s_check_command;
+                    end
+                end
+                s_send_error_message : begin
+                    wtb_enable <= 1;
+                    wtb_mode_select <= 0; // byte mode
+                    if (save_error == 2'b01) begin
+                        wtb_byte <= 1;
+                    end else if (save_error == 2'b10) begin
+                        wtb_byte <= 2;
+                    end else if (save_error == 2'b11) begin
+                        wtb_byte <= 3;
+                    end
+                    save_error <= 0; // reset saved error
+                    state <= s_idle; // should I do this like this we arent outputing to any other module so I can just go look for new input
+                    // how do I handle wtb being busy --> Just load to register ~ meh
+                end
+                s_check_command : begin
+                    mem_enable <= 1;
+                    mem_readWrite <= cmd_dec_readWrite;
+                    mem_address <= cmd_dec_address;
+                    if (cmd_dec_command == 8'h01) begin
+                        state <= s_read_wait;
+                    end
+                    if (cmd_dec_command == 8'h00) begin
+                        state <= s_write;
+                        mem_dataIn <= cmd_dec_data;
+                    end
+                end
+                s_read_wait : state <= s_read; // wait for memory fetch
+                s_read : begin
+                    mem_enable <= 0;
+                    wtb_enable <= 1;
+                    wtb_mode_select <= 1; // word mode
+                    wtb_word <= mem_dataOut;
+                    state <= s_idle;
+                end
+                s_write : state <= s_idle; // memory is being written
+                default : state <= s_idle;
+            endcase
+        end
+    end */
+
+    always @(posedge sys_clk /*or negedge sw_0*/) begin  // synchronous reset
         if (!sw_0) begin
             // reset
             mem_enable <= 0;
@@ -117,6 +196,9 @@ module top(
         end else begin
             case(state)
                 s_idle : begin
+                    mem_dataIn <= 0;
+                    mem_address <= 0;
+                    mem_readWrite <= 0;
                     mem_enable <= 0;
                     wtb_enable <= 0;
                     save_error <= 0;
