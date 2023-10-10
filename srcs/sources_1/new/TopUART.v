@@ -25,6 +25,7 @@ module TopUART(
     input         clk,
     input         rst, // reset
     input         serial_in,
+    input         arbitratorDone,
     input  [31:0] dataOutOfMemory,
     output        serial_out,
     output        out_readWrite,
@@ -259,7 +260,11 @@ module TopUART(
                         mem_dataIn <= cmd_dec_data;
                     end
                 end
-                s_read_wait : state <= s_read; // wait for memory fetch
+                s_read_wait : begin
+                    if (arbitratorDone) begin
+                        state <= s_read; // wait for memory fetch
+                    end
+                end
                 s_read : begin
                     mem_enable <= 0;
                     wtb_enable <= 1;

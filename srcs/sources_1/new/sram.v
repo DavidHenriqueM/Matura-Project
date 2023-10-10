@@ -29,7 +29,7 @@ module sram(
                     dataOut <= memory[address];
                 end
             // Write operation
-                if (!readWrite && (address < DEPTH)) begin
+                if (!readWrite && (address < DEPTH)) begin // write is 0
                     memory[address] <= dataIn;
                 end
             end else begin

@@ -60,7 +60,7 @@ module top_tb();
     initial begin
         sys_clk <= 0;
         sw_0 <=  1;
-        #1
+        #10
         sw_0 <= 0;
         #1
         sw_0 <= 1;

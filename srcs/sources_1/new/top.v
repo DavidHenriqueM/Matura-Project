@@ -28,234 +28,77 @@ module top(
     output RsTx
     );
 
-    parameter s_idle =               4'b0000;
-    parameter s_is_error =           4'b0001;
-    parameter s_send_error_message = 4'b0010;
-    parameter s_check_command =      4'b0011;
-    parameter s_read_wait =          4'b0100;
-    parameter s_read =               4'b0101;
-    parameter s_write =              4'b0110;
-
-    // wires for command decoder
-    wire        cmd_dec_done;
-    wire [7:0]  cmd_dec_command;
-    wire [14:0] cmd_dec_address;
-    wire [31:0] cmd_dec_data;
-    wire [1:0]  cmd_dec_error;
-    wire        cmd_dec_readWrite;
-
-
-    //wires for memory
-    reg         mem_readWrite;
-    reg [31:0]  mem_dataIn;
-    reg         mem_enable;
-    reg [14:0]   mem_address;
+    
+    wire         mem_readWrite;
+    wire [31:0]  mem_dataIn;
+    wire         mem_enable;
+    wire [14:0]   mem_address;
     wire [31:0] mem_dataOut;
 
-    // wires for the word to byte module
+    //registers and wires for memory arbitrator
 
-    reg        wtb_enable = 0;
-    reg        wtb_mode_select;
-    reg [31:0] wtb_word = 32'h0;
-    reg [7:0]  wtb_byte;
-    wire       wtb_done;
+    reg memJudge_enable = 1;
+    wire Judge_mem_enable1;
+    wire Judge_mem_enable2;
+    wire Judge_mem_readWrite1;
+    wire Judge_mem_readWrite2; 
+    wire [14:0] Judge_Address1;
+    wire [14:0] Judge_Address2;
+    wire [31:0] Judge_data1;
+    wire [31:0] Judge_data2;
+    wire [31:0] Judge_DataOut1;
+    wire [31:0] Judge_DataOut2;
+    wire Judge_done1;
+    wire Judge_done2;
 
-    reg [2:0] state = s_idle;
+    wire        exec_done;
+    wire [31:0] exec_data;
+    wire        exec_sample;
 
-    reg [1:0] save_error = 0;
-
-    command_decoder CommandDecoder(
-        .clock       (sys_clk),
-        .reset       (sw_0),
-        .uart_in     (RsRx),
-        .o_command   (cmd_dec_command),
-        .o_address   (cmd_dec_address),
-        .o_data      (cmd_dec_data),
-        .o_readwrite (cmd_dec_readWrite),
-        .o_done      (cmd_dec_done),
-        .o_error     (cmd_dec_error)
-        );
-
-
-    sram SRAM(
-        .clock      (sys_clk),
-        .reset      (sw_0),
-        .enable     (mem_enable), 
-        .readWrite  (mem_readWrite),
-        .dataIn     (mem_dataIn),
-        .address    (mem_address),
-        .dataOut    (mem_dataOut)
+    TopUART TopUART(
+       .clk             (sys_clk),
+       .rst             (sw_0),
+       .serial_in       (RsRx),
+       .arbitratorDone  (Judge_done1),
+       .dataOutOfMemory (Judge_DataOut1), 
+       .serial_out      (RsTx),
+       .out_readWrite   (Judge_mem_readWrite1),
+       .dataIntoMemory  (Judge_data1),
+       .memoryEnable    (Judge_mem_enable1),
+       .memoryAddress   (Judge_Address1)
     );
 
-    word_to_byte_tx WordToByte(
+
+    memoryArbitration memJudge(
         .clock         (sys_clk),
         .reset         (sw_0),
-        .enable        (wtb_enable),
-        .i_mode_select (wtb_mode_select),
-        .i_word        (wtb_word),
-        .i_byte        (wtb_byte),
-        .o_serial      (RsTx),
-        .o_done        (wtb_done)
+        .moduleEnable  (memJudge_enable),
+        .memoryEnable1 (Judge_mem_enable1),
+        .memoryEnable2 (Judge_mem_enable2),
+        .readWrite1    (Judge_mem_readWrite1),
+        .readWrite2    (Judge_mem_readWrite2),
+        .Address1      (Judge_Address1),
+        .Address2      (Judge_Address2),
+        .Data1         (Judge_data1),
+        .Data2         (Judge_data2),
+        .DataOut1      (Judge_DataOut1),
+        .DataOut2      (Judge_DataOut2),
+        .done1         (Judge_done1),
+        .done2         (Judge_done2)
         );
 
-
-    /*
-    always @(posedge sys_clk or negedge sw_0) begin  // asynchronous reset
-        if (!sw_0) begin
-            // reset
-            mem_enable <= 0;
-            //mem_readWrite <= 0;
-            wtb_enable <= 0;
-            wtb_mode_select <= 1;
-            wtb_byte <= 0;
-            wtb_word <= 0;
-            save_error <= 0;
-            state <= s_idle;
-            //mem_address <= 0;
-            //mem_dataIn <= 0;
-            
-        end else begin
-            case(state)
-                s_idle : begin
-                    mem_dataIn <= 0;
-                    mem_address <= 0;
-                    mem_readWrite <= 0;
-                    mem_enable <= 0;
-                    wtb_enable <= 0;
-                    save_error <= 0;
-
-                    wtb_byte <= 0; // reset what will be transmitted
-                    wtb_word <= 0;
-
-                    if (cmd_dec_done) begin
-                        state <= s_is_error;
-                    end
-                end
-                s_is_error : begin
-                    if (cmd_dec_error != 2'b00) begin // if not in the error free state
-                        state <= s_send_error_message;   
-                        save_error <= cmd_dec_error; // we need to register the error value to compare it in the next state
-                    end else begin
-                        state <= s_check_command;
-                    end
-                end
-                s_send_error_message : begin
-                    wtb_enable <= 1;
-                    wtb_mode_select <= 0; // byte mode
-                    if (save_error == 2'b01) begin
-                        wtb_byte <= 1;
-                    end else if (save_error == 2'b10) begin
-                        wtb_byte <= 2;
-                    end else if (save_error == 2'b11) begin
-                        wtb_byte <= 3;
-                    end
-                    save_error <= 0; // reset saved error
-                    state <= s_idle; // should I do this like this we arent outputing to any other module so I can just go look for new input
-                    // how do I handle wtb being busy --> Just load to register ~ meh
-                end
-                s_check_command : begin
-                    mem_enable <= 1;
-                    mem_readWrite <= cmd_dec_readWrite;
-                    mem_address <= cmd_dec_address;
-                    if (cmd_dec_command == 8'h01) begin
-                        state <= s_read_wait;
-                    end
-                    if (cmd_dec_command == 8'h00) begin
-                        state <= s_write;
-                        mem_dataIn <= cmd_dec_data;
-                    end
-                end
-                s_read_wait : state <= s_read; // wait for memory fetch
-                s_read : begin
-                    mem_enable <= 0;
-                    wtb_enable <= 1;
-                    wtb_mode_select <= 1; // word mode
-                    wtb_word <= mem_dataOut;
-                    state <= s_idle;
-                end
-                s_write : state <= s_idle; // memory is being written
-                default : state <= s_idle;
-            endcase
-        end
-    end */
-
-    always @(posedge sys_clk /*or negedge sw_0*/) begin  // synchronous reset
-        if (!sw_0) begin
-            // reset
-            mem_enable <= 0;
-            mem_readWrite <= 0;
-            wtb_enable <= 0;
-            wtb_mode_select <= 1;
-            wtb_byte <= 0;
-            wtb_word <= 0;
-            save_error <= 0;
-            state <= s_idle;
-            mem_address <= 0;
-            mem_dataIn <= 0;
-            
-        end else begin
-            case(state)
-                s_idle : begin
-                    mem_dataIn <= 0;
-                    mem_address <= 0;
-                    mem_readWrite <= 0;
-                    mem_enable <= 0;
-                    wtb_enable <= 0;
-                    save_error <= 0;
-
-                    wtb_byte <= 0; // reset what will be transmitted
-                    wtb_word <= 0;
-
-                    if (cmd_dec_done) begin
-                        state <= s_is_error;
-                    end
-                end
-                s_is_error : begin
-                    if (cmd_dec_error != 2'b00) begin // if not in the error free state
-                        state <= s_send_error_message;   
-                        save_error <= cmd_dec_error; // we need to register the error value to compare it in the next state
-                    end else begin
-                        state <= s_check_command;
-                    end
-                end
-                s_send_error_message : begin
-                    wtb_enable <= 1;
-                    wtb_mode_select <= 0; // byte mode
-                    if (save_error == 2'b01) begin
-                        wtb_byte <= 1;
-                    end else if (save_error == 2'b10) begin
-                        wtb_byte <= 2;
-                    end else if (save_error == 2'b11) begin
-                        wtb_byte <= 3;
-                    end
-                    save_error <= 0; // reset saved error
-                    state <= s_idle; // should I do this like this we arent outputing to any other module so I can just go look for new input
-                    // how do I handle wtb being busy --> Just load to register ~ meh
-                end
-                s_check_command : begin
-                    mem_enable <= 1;
-                    mem_readWrite <= cmd_dec_readWrite;
-                    mem_address <= cmd_dec_address;
-                    if (cmd_dec_command == 8'h01) begin
-                        state <= s_read_wait;
-                    end
-                    if (cmd_dec_command == 8'h00) begin
-                        state <= s_write;
-                        mem_dataIn <= cmd_dec_data;
-                    end
-                end
-                s_read_wait : state <= s_read; // wait for memory fetch
-                s_read : begin
-                    mem_enable <= 0;
-                    wtb_enable <= 1;
-                    wtb_mode_select <= 1; // word mode
-                    wtb_word <= mem_dataOut;
-                    state <= s_idle;
-                end
-                s_write : state <= s_idle; // memory is being written
-                default : state <= s_idle;
-            endcase
-        end
-    end
+    ringBuffer ringBuffer(
+        .clk               (sys_clk),
+        .rst               (sw_0),
+        .mem_DataOut       (Judge_DataOut2),
+        .mem_done          (Judge_done2),
+        .exec_done         (exec_done),
+        .mem_enable        (Judge_mem_enable2),
+        .mem_readWrite     (Judge_mem_readWrite2),
+        .mem_address       (Judge_Address2),
+        .mem_DataWrite     (Judge_data2),
+        .dataToInterpreter (exec_data),
+        .exec_sample       (exec_sample)
+        );
 
 endmodule
