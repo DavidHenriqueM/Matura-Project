@@ -31,7 +31,9 @@ module TopUART(
     output        out_readWrite,
     output [31:0] dataIntoMemory,
     output        memoryEnable,
-    output [14:0] memoryAddress
+    output [14:0] memoryAddress,
+    output [2:0]  uart_rx_state,
+    output [2:0]  o_error
     );
 
     parameter s_idle =               4'b0000;
@@ -47,7 +49,7 @@ module TopUART(
     wire [7:0]  cmd_dec_command;
     wire [14:0] cmd_dec_address;
     wire [31:0] cmd_dec_data;
-    wire [1:0]  cmd_dec_error;
+    wire [2:0]  cmd_dec_error;
     wire        cmd_dec_readWrite;
 
 
@@ -68,7 +70,7 @@ module TopUART(
 
     reg [2:0] state = s_idle;
 
-    reg [1:0] save_error = 0;
+    reg [2:0] save_error = 0;
 
     command_decoder CommandDecoder(
         .clock       (clk),
@@ -79,7 +81,8 @@ module TopUART(
         .o_data      (cmd_dec_data),
         .o_readwrite (cmd_dec_readWrite),
         .o_done      (cmd_dec_done),
-        .o_error     (cmd_dec_error)
+        .o_error     (cmd_dec_error),
+        .uart_rx_state (uart_rx_state)
         );
 
     // intead of memory module we assign from inputs
@@ -193,7 +196,9 @@ module TopUART(
                 default : state <= s_idle;
             endcase
         end
-    end */
+    end */ 
+
+    assign o_error = cmd_dec_error;
 
     always @(posedge clk /*or negedge rst*/) begin  // synchronous reset
         if (!rst) begin
@@ -227,7 +232,7 @@ module TopUART(
                     end
                 end
                 s_is_error : begin
-                    if (cmd_dec_error != 2'b00) begin // if not in the error free state
+                    if (cmd_dec_error != 0) begin // if not in the error free state
                         state <= s_send_error_message;   
                         save_error <= cmd_dec_error; // we need to register the error value to compare it in the next state
                     end else begin
@@ -237,16 +242,14 @@ module TopUART(
                 s_send_error_message : begin
                     wtb_enable <= 1;
                     wtb_mode_select <= 0; // byte mode
-                    if (save_error == 2'b01) begin
-                        wtb_byte <= 1;
-                    end else if (save_error == 2'b10) begin
-                        wtb_byte <= 2;
-                    end else if (save_error == 2'b11) begin
-                        wtb_byte <= 3;
-                    end
-                    save_error <= 0; // reset saved error
-                    state <= s_idle; // should I do this like this we arent outputing to any other module so I can just go look for new input
+                    if (save_error != 0) begin
+                        wtb_byte <= save_error;
+                        save_error <= 0; // reset saved error
+                        state <= s_idle; // should I do this like this we arent outputing to any other module so I can just go look for new input
                     // how do I handle wtb being busy --> Just load to register ~ meh
+                    end else begin
+                        state <= s_check_command;
+                    end
                 end
                 s_check_command : begin
                     mem_enable <= 1;
@@ -255,7 +258,7 @@ module TopUART(
                     if (cmd_dec_command == 8'h01) begin
                         state <= s_read_wait;
                     end
-                    if (cmd_dec_command == 8'h00) begin
+                    if (cmd_dec_command == 8'h02) begin
                         state <= s_write;
                         mem_dataIn <= cmd_dec_data;
                     end

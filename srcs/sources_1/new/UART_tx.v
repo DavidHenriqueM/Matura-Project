@@ -17,7 +17,7 @@
 // Revision 0.01 - File Created
 // Additional Comments:
 // 
-// CLKS_PER_BIT = (Clock Frequency/UART buad) in this case 20 clks per bit
+// CLKS_PER_BIT = (Clock Frequency/UART buad) in this case 868 clks per bit
 // Tis but a state maschine
 // drive 32'bz for a byte
 //////////////////////////////////////////////////////////////////////////////////
@@ -164,7 +164,7 @@ endmodule*/
 
 
 module uart_tx
-    #(parameter CLKS_PER_BIT = 20)
+    #(parameter CLKS_PER_BIT = 868)
     (
     input clock, 
     input enable,
@@ -191,7 +191,7 @@ module uart_tx
     
     
     reg [2:0] main_state = 0;
-    reg [7:0] clock_count = 0;
+    integer clock_count = 0;
     reg [2:0] bit_index = 0;
     reg [7:0] r_data = 0;
     //reg [31:0] r_word = 0;

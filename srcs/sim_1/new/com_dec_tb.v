@@ -72,7 +72,6 @@ module com_dec_tb(
         .o_address(w_address),
         .o_data(w_data),
         .o_done(w_cmd_dec_done),
-        .state(w_state),
         .o_error(w_error)
         );
     
@@ -83,23 +82,32 @@ module com_dec_tb(
         .i_word(r_WTB_word),
         .i_byte(r_WTB_byte),
         .o_serial(w_WTB_serial),
-        .o_done(w_WTB_done),
-        .main_state(w_WTB_state)
+        .o_done(w_WTB_done)
         );
     initial begin
-        fork
+
         //r_WTB_enable <= 1;
         clk <= 1;
         r_WTB_byte = 8'h00;
         r_WTB_mode_select <= 0;
         #15 r_WTB_enable <= 1;
-        #1900 r_WTB_enable <= 1;
-        #1800 r_WTB_byte <= 8'hab;
-        #3800 r_WTB_byte <= 8'h10;
-        #5800 r_WTB_mode_select <= 1;
-        #5800 r_WTB_word <= 32'h00ff12cd;
-        #6000 r_WTB_enable <= 1;
-        join
+        #86860 r_WTB_byte <= 8'hab;
+        #86860 r_WTB_byte <= 8'h10;
+        #86860 r_WTB_mode_select <= 1;
+         r_WTB_word <= 32'h00ff12cd;
+         r_WTB_enable <= 1;
+        #86860 r_WTB_enable <= 0;
+
+        #10000000
+        //r_WTB_enable <= 1;
+
+        r_WTB_byte = 8'h01;
+        r_WTB_mode_select <= 0;
+        #15 r_WTB_enable <= 1;
+        #86860 r_WTB_byte <= 8'hcd;
+        #86860 r_WTB_byte <= 8'h25;
+        #86860 r_WTB_enable <= 0;
+
     end
 
     /*always @(w_cmd_dec_done) begin

@@ -26,16 +26,22 @@ module memoryArbitration(
     input moduleEnable,
     input memoryEnable1,
     input memoryEnable2,
+    input memoryEnable3,
     input readWrite1,
     input readWrite2,
+    input readWrite3,
     input [14:0] Address1,
     input [14:0] Address2,
+    input [14:0] Address3,
     input [31:0] Data1,
     input [31:0] Data2,
+    input [31:0] Data3,
     output reg [31:0] DataOut1,
     output reg [31:0] DataOut2,
+    output reg [31:0] DataOut3,
     output reg done1,
-    output reg done2    
+    output reg done2,
+    output reg done3    
     );
     
     parameter s_idle = 4'b0000;
@@ -45,9 +51,9 @@ module memoryArbitration(
     parameter s_two = 4'b0100;
     parameter s_two_wait = 4'b0101;
     parameter s_two_wait2 = 4'b0110;
-    parameter s_both = 4'b0111;
-    parameter s_both_wait = 4'b1000;
-    parameter s_both_wait2 = 4'b1001;
+    parameter s_three = 4'b0111;
+    parameter s_three_wait = 4'b1000;
+    parameter s_three_wait2 = 4'b1001;
     parameter s_clear_memory = 4'b1010;
     parameter s_clear_memory_wait = 4'b1011;
 
@@ -60,6 +66,8 @@ module memoryArbitration(
     wire [31:0] mem_dataOut;
 
     reg [14:0] clear_address;
+
+    reg  mem_enable_reg1, mem_enable_reg2 ,mem_enable_reg3; 
 
     sram SRAM(
         .clock      (clock),
@@ -88,13 +96,18 @@ module memoryArbitration(
                 mem_enable <= 0;
                 done1 <= 0;
                 done2 <= 0;
+                done3 <= 0;
                 if(moduleEnable) begin
-                    if(memoryEnable1 && memoryEnable2) begin
-                        state <= s_both;
-                    end else if(memoryEnable1) begin
-                        state <= s_one;
-                    end else if(memoryEnable2) begin
+                    mem_enable_reg1 <= memoryEnable1;
+                    mem_enable_reg2 <= memoryEnable2;
+                    mem_enable_reg3 <= memoryEnable3;
+
+                    if (memoryEnable1) begin
+                        state <= s_one; 
+                    end else if (memoryEnable2) begin
                         state <= s_two;
+                    end else if (memoryEnable3) begin
+                        state <= s_three; 
                     end
                 end
             end
@@ -111,7 +124,11 @@ module memoryArbitration(
             s_one_wait2 : begin
                 DataOut1 <= mem_dataOut;
                 done1 <= 1;
-                state <= s_idle;
+                if (mem_enable_reg2) begin
+                    state <= s_two;
+                end else begin
+                    state <= s_idle;
+                end
             end
             s_two : begin
                 mem_enable <= 1;
@@ -126,21 +143,25 @@ module memoryArbitration(
             s_two_wait2 : begin
                 DataOut2 <= mem_dataOut;
                 done2 <= 1;
-                state <= s_idle;
+                if (mem_enable_reg3) begin
+                    state <= s_three;
+                end else begin
+                    state <= s_idle;
+                end
             end
-            s_both : begin
-                state <= s_both_wait;
-            end
-            s_both_wait : begin
+            s_three : begin
                 mem_enable <= 1;
-                mem_readWrite <= readWrite1;
-                mem_address <= Address1;
-                mem_dataIn <= Data1;
-                state <= s_both_wait2;
+                mem_readWrite <= readWrite3;
+                mem_address <= Address3;
+                mem_dataIn <= Data3;
+                state <= s_three_wait;
             end
-            s_both_wait2 : begin
-                DataOut1 <= mem_dataOut;
-                done1 <= 1;
+            s_three_wait : begin
+                state <= s_three_wait2;
+            end
+            s_three_wait2 : begin
+                DataOut3 <= mem_dataOut;
+                done3 <= 1;
                 state <= s_idle;
             end
             s_clear_memory : begin

@@ -61,8 +61,10 @@ module uart_rx_tb(
         uart_tx_rst <= 0;
         #1
         uart_tx_rst <= 1;
-        r_uart_byte <= 8'h0f;
+        r_uart_byte <= 8'h00;
         r_uart_tx_enable <= 1;
+        #8500
+        r_uart_byte <= 8'hff;
     end
 
     always begin
@@ -74,10 +76,7 @@ module uart_rx_tb(
         #1;
     end
 
-    always @(posedge w_uart_rx_done) begin
-        r_uart_byte <= 8'hab;
-        r_uart_rx_out <= w_uart_rx_out;
-    end
+    
     always begin
         #100000000 $stop;
     end

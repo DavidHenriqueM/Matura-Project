@@ -26,6 +26,7 @@ module ringBuffer(
     input      [31:0] mem_DataOut,
     input             mem_done,
     input             exec_done,
+    //input             is_reset,
     output reg        mem_enable,
     output reg        mem_readWrite,
     output reg [14:0] mem_address,
@@ -49,6 +50,8 @@ module ringBuffer(
 
     reg [3:0] readPointer  = 0;
     reg [3:0] writePointer = 0;
+    
+    integer cycle_count = 0;
 
     reg [3:0] state = 0;
 
@@ -59,6 +62,9 @@ module ringBuffer(
             mem_enable <= 0;    
             readPointer <= 0;
             dataToInterpreter <= 32'b0;
+            cycle_count <= 0;
+            exec_sample <= 0;
+            mem_readWrite <= 1;
         end
         else begin
             case(state)
@@ -69,38 +75,55 @@ module ringBuffer(
                     mem_enable <= 1;
                     mem_address <= 15'h0002;
                     mem_readWrite <= 1; //read
+                    state <= s_check_write_pointer_wait;
                 end
                 s_check_write_pointer_wait : begin
-                    if (mem_done) begin
-                        writePointer <= mem_DataOut;
-                        state <= s_check_readpointer;
+                    mem_enable <= 0;
+                    if (cycle_count < 10) begin // int the case that memory arbitration is not available ie in reset
+                        if (mem_done) begin
+                            writePointer <= mem_DataOut;
+                            cycle_count <= 0;
+                            state <= s_check_readpointer;
+                        end else begin
+                            cycle_count <= cycle_count + 1;
+                        end
+                    end else begin
+                        state <= s_idle;
+                        cycle_count <= 0;
                     end
                 end
                 s_check_readpointer : begin
-                    if (readPointer != writePointer) begin
+                    if (readPointer != writePointer) begin // buffer isn't empty
                         state <= s_wait_for_mem_write;
                         mem_enable <= 1;
-                        mem_address <= readPointer;
+                        mem_address <= readPointer + 3 ; // take account 3 occuppied memory slots 0000 0001 (readpointer) 0002 (writepointer)
                     end else begin
-                        state <= s_idle;
+                        state <= s_idle; // idle if buffer is empty
                     end
                 end
                 s_wait_for_mem_write : begin
-                    state <= s_give_exec_data;
-                    mem_enable <= 0;
+                mem_enable <= 0;
+                    if (mem_done) begin
+                        state <= s_give_exec_data; // read data in read pointer slot
+                        mem_enable <= 0;
+                    end
                 end
                 s_give_exec_data : begin
                     mem_enable <= 1;
                     mem_readWrite <= 1; // read
-                    mem_address <= readPointer;
+                    mem_address <= readPointer + 3;
                     state <= s_wait_exec_read;
                 end
                 s_wait_exec_read : begin
-                    dataToInterpreter <= mem_DataOut;
-                    exec_sample <= 1;
-                    state <= s_wait_for_exec;
+                mem_enable <= 0;
+                    if (mem_done) begin
+                        dataToInterpreter <= mem_DataOut;
+                        exec_sample <= 1;
+                        state <= s_wait_for_exec;
+                    end
                 end
                 s_wait_for_exec : begin
+                exec_sample <= 0;
                     if (exec_done) begin
                         readPointer <= readPointer + 1;
                         state <= s_update_Pointer;
@@ -114,8 +137,10 @@ module ringBuffer(
                     state <= s_wait_for_update;
                 end
                 s_wait_for_update : begin
-                    mem_enable <= 0;
-                    state <= s_idle;
+                mem_enable <= 0;
+                    if (mem_done) begin
+                        state <= s_idle;
+                    end
                 end
             endcase
         end
