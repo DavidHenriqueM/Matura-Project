@@ -15,7 +15,7 @@
 // 
 // Revision:
 // Revision 0.01 - File Created
-// Additional Comments:
+// Additional Comments: This is ment to test the the FTDI 2232hq uart transciever on the Basys 3 FPGA board
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -27,7 +27,7 @@ module FT2232_test(
     output reg RsTx
     );
 
-always @(posedge sys_clk) begin
+always @(posedge sys_clk) begin //sequential assignment allows for the use of a debug core
     RsTx <= RsRx;
 end
 

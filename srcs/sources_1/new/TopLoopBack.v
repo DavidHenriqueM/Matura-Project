@@ -54,6 +54,8 @@ module TopLoopBack(
     .serial_out(RsTx)
     );
 
+    wire w_rx_done;
+
     uart_rx UartReciever(
     .clock(sys_clk),
     .reset(sw_0),

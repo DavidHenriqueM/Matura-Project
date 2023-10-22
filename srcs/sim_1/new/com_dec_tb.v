@@ -88,7 +88,7 @@ module com_dec_tb(
 
         //r_WTB_enable <= 1;
         clk <= 1;
-        r_WTB_byte = 8'h00;
+        r_WTB_byte = 8'h02;
         r_WTB_mode_select <= 0;
         #15 r_WTB_enable <= 1;
         #86860 r_WTB_byte <= 8'hab;

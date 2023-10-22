@@ -98,7 +98,7 @@ module memoryArbitration(
                 done2 <= 0;
                 done3 <= 0;
                 if(moduleEnable) begin
-                    mem_enable_reg1 <= memoryEnable1;
+                    // mem_enable_reg1 <= memoryEnable1;
                     mem_enable_reg2 <= memoryEnable2;
                     mem_enable_reg3 <= memoryEnable3;
 

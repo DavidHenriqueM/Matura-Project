@@ -26,7 +26,7 @@ module top(
     input sw_0, // reset
     input RsRx,
     output RsTx,
-    output led_0,
+//    output led_0,
     output led_13,
     output led_14,
     output led_15
@@ -42,7 +42,7 @@ module top(
     //registers and wires for memory arbitrator
 
     reg memJudge_enable = 1;
-    reg stackInterpret_enable = 1;
+
 
     wire Judge_mem_enable1;
     wire Judge_mem_enable2;
@@ -67,7 +67,7 @@ module top(
     wire [31:0] exec_data;
     wire        exec_sample;
     wire [2:0]  uart_rx_state;
-    wire [1:0]  error_code;
+    wire [2:0]  error_code;
 
     TopUART TopUART(
        .clk             (sys_clk),
@@ -127,30 +127,29 @@ module top(
         );
 
   
-    InterpretLED InterpretLED(
+/*    InterpretLED InterpretLED(
         .clock            (sys_clk),
         .reset            (sw_0),
         .sample_command   (exec_sample),
         .command          (exec_data),
         .ledstate         (led_0),
         .next_instruction (exec_done)
-        );
+        );*/
 
-/*stackInterpreter StackInterpret(
+stackInterpreter StackInterpret(
     .clock               (sys_clk),
     .reset               (sw_0),
-    .enable              (stackInterpret_enable),
     .command_from_buffer (exec_data),
     .command_sample      (exec_sample),
     .memory_data_read    (Judge_DataOut3), 
     .memory_done         (Judge_done3),
     .memory_enable       (Judge_mem_enable3),
     .memory_readWrite    (Judge_mem_readWrite3),
-    .memory_addresss     (Judge_Address3),
+    .memory_address     (Judge_Address3),
     .memory_data_write   (Judge_data3),
     .read_increment      (exec_done)
     
-    );*/
+    );
 
 
 endmodule
